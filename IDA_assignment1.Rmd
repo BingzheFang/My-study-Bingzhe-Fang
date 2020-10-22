@@ -1,0 +1,187 @@
+---
+title: "assignment"
+author: "BingzheFang"
+date: "10/22/2020"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r set}
+library(MASS)
+require(MASS)
+
+```
+# Question 3
+```{r Question 3 set up}
+n = 500
+set.seed(1)
+Z1 = mvrnorm(n, mu = 0, Sigma = 1)
+Z2 = mvrnorm(n, mu = 0, Sigma = 1)
+Z3 = mvrnorm(n, mu = 0, Sigma = 1)
+
+Y1 = Z1 +1
+Y2 = 5 + 2*Z1 + Z2
+
+Y2_obs = c()
+a = 2
+b = 0
+
+for (i in 1:500) {
+  if(a*(Y1[i]-1) + b*(Y2[i]-5) + Z3[i] >= 0){
+    Y2_obs = c(Y2_obs,Y2[i])
+  }
+  else{
+    Y2_obs = c(Y2_obs,NA)
+  }
+}
+```
+## Part a for Question 3
+```{r part a for Question3}
+plot(density(na.omit(Y2_obs)), 
+     lwd = 2, col = "red", xlab = " ", xlim = c(-3,15),
+     main = "marginal distribution of Y2 and Y2_observed")
+
+lines(density(Y2), 
+     lwd = 2, col = "blue", 
+     main = "marginal distribution of Y2 and Y2_observed")
+
+legend(8, 0.23, legend = c("Observed data", "Complete data"), 
+       col = c("red", "blue"), lty = c(1, 1), lwd = c(2, 2), bty = "n")
+```
+
+## Part b for Question 3
+```{r part b for Question3}
+data1 = data.frame(Y2 = Y2_obs, Y1 = Y1)
+fit_data1 = lm(Y2 ~ Y1, data = data1)
+
+pred_data1 = predict(fit_data1, newdata = data1) + rnorm(n, 0, sigma(fit_data1))
+Y2_imput = ifelse(is.na(data1$Y2) == TRUE, pred_data1, data1$Y2)
+
+plot(density(Y2_imput), 
+     lwd = 3, col = "red", xlab = " ", xlim = c(-5,15),
+     main = "marginal distribution of Y2 and Y2_imput")
+
+lines(density(Y2), 
+      lwd = 1.5, col = "blue", 
+      main = "marginal distribution of Y2 and Y2_imput")
+
+legend(9, 0.16, legend = c("After imputation", "Originally  data"), 
+       col = c("red", "blue"), lty = c(1, 1), lwd = c(2, 2), bty = "n")
+```
+
+## Part c for Question 3
+```{r part c for Question3}
+Y2_obs2 = c()
+a = 0
+b = 2
+
+for (i in 1:500) {
+  if(a*(Y1[i]-1) + b*(Y2[i]-5) + Z3[i] >= 0){
+    Y2_obs2 = c(Y2_obs2,Y2[i])
+  }
+  else{
+    Y2_obs2 = c(Y2_obs2,NA)
+  }
+}
+
+plot(density(na.omit(Y2_obs2)), 
+     lwd = 2, col = "red", xlab = " ", xlim = c(-3,15),
+     main = "marginal distribution of Y2 and Y2_observed")
+
+lines(density(Y2), 
+      lwd = 2, col = "blue", 
+      main = "marginal distribution of Y2 and Y2_observed")
+
+legend(9, 0.30, legend = c("Observed data", "Complete data"), 
+       col = c("red", "blue"), lty = c(1, 1), lwd = c(2, 2), bty = "n")
+```
+
+## Part d for Question 3
+```{r part d for Question3}
+data2 = data.frame(Y2 = Y2_obs2, Y1 = Y1)
+fit_data2 = lm(Y2 ~ Y1, data = data2)
+
+pred_data2 = predict(fit_data2, newdata = data2) + rnorm(n, 0, sigma(fit_data2))
+Y2_imput2 = ifelse(is.na(data2$Y2) == TRUE, pred_data2, data2$Y2)
+
+plot(density(Y2_imput2), 
+     lwd = 3, col = "red", xlab = " ", xlim = c(-3,15),
+     main = "marginal distribution of Y2 and Y2_imput")
+
+lines(density(Y2), 
+      lwd = 1.5, col = "blue", 
+      main = "marginal distribution of Y2 and Y2_imput")
+
+legend(9, 0.16, legend = c("After imputation", "Originally  data"), 
+       col = c("red", "blue"), lty = c(1, 1), lwd = c(2, 2), bty = "n")
+```
+
+# Question 4
+```{r Quesion 4 set up}
+
+load("~/Documents/爱丁堡/semester 1/Imcomplete Data Analysis /week3/assignment1/databp.Rdata")
+
+caculte_data = function(data){
+  recov_mean = round(mean(data$recovtime),6)
+  recov_se = round(sd(data$recovtime)/sqrt(nrow(data)),6)
+  re_do_pearson = round(cor(data$logdose,data$recovtime,method = "pearson"),6)
+  re_bl_pearson = round(cor(data$bloodp,data$recovtime,method = "pearson"),6)
+  
+  cat('The mean value of the recovery time:', recov_mean,'\n')
+  cat('The associated standard error of the recovery time:', recov_se,'\n')
+  cat('The pearson correlation between does and recovery time:', re_do_pearson,'\n')
+  cat('The pearson correlation between blood presure and recovery time:', re_bl_pearson,'\n')
+}
+
+```
+## Part a for Question 4
+```{r part a for Quesion4}
+data_com = na.omit(databp) 
+caculte_data(data_com)
+```
+## Part b for Question 4
+```{r part b for Question4}
+data_imp_mean = databp
+recov_mean2 = round(mean(data_com$recovtime),6)
+data_imp_mean$recovtime = ifelse(is.na(databp$recovtime) == TRUE, recov_mean2, databp$recovtime)
+
+caculte_data(data_imp_mean)
+```
+
+## Part c for Question 4
+```{r parc for Question4}
+fit_databp = lm(recovtime ~ logdose + bloodp, data = databp)
+
+pred_databp = predict(fit_databp, newdata = databp)
+data_imp_lm = databp
+data_imp_lm$recovtime = ifelse(is.na(databp$recovtime) == TRUE, pred_databp, databp$recovtime)
+caculte_data(data_imp_lm)
+```
+
+## Part d for Question 4
+```{r part d for Question4}
+set.seed(1)
+pred_databp2 = predict(fit_databp, newdata = databp) + rnorm(nrow(databp), 0, sigma(fit_databp))
+data_imp_sto = databp
+data_imp_sto$recovtime = ifelse(is.na(databp$recovtime) == TRUE, pred_databp2, databp$recovtime)
+
+caculte_data(data_imp_sto)
+```
+## Part e for Question 4
+```{r part e for Question4}
+index_na = which(is.na(databp$recovtime == TRUE))
+data_imp_hot = databp
+recov_com = na.omit(databp$recovtime)
+
+for (i in index_na) {
+  diff = (rep(c(1),22)*data_imp_lm$recovtime[i]-recov_com)^2
+  a = min(diff)
+  min_ind = which(diff == min(diff),arr.ind=TRUE)
+  data_imp_hot$recovtime[i] = recov_com[min_ind]
+}
+  
+caculte_data(data_imp_hot)
+
+```
+
