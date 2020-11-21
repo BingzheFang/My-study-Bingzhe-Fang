@@ -1,0 +1,448 @@
+---
+title: "assignment2 Bingzhe Fang"
+author: "BingzheFang"
+date: "11/17/2020"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Question 1
+## (a)
+Because 
+$$
+F(y)+S(y)=1,
+$$
+so
+$$
+S(y)=1-F(x)=e^{-\frac{y^2}{2\theta}},
+$$
+for the censored observations, it is $Y > C$ so its contribution to the likelihood is 
+$$
+\Pr(Y>C;\theta)=S(C;\theta)
+$$
+Also, $pdf$ f is
+\begin{equation*}
+f(y;\theta) = \frac{dF}{dy} = \frac{y}{\theta}e^{-\frac{y^2}{2\theta}}
+\end{equation*}
+\begin{align*}
+L(\theta)&=\prod_{i=1}^{n}\left\{[f(y_i;\theta)]^{r_i}[S(C;\theta)]^{1-r_i}\right\}\\
+&=\prod_{i=1}^{n}\left\{[\frac{y_i}{\theta} e^{\frac{-y_i}{2\theta}}]^{r_i}[e^{\frac{-C^2}{2\theta}}]^{1-r_i}\right\}\\
+&=\frac{\prod_{i=1}^{n}{y_ir_i}}{\theta^{\sum{i=1}^{n}{r_i}}}e^{-\frac{1}{2\theta}\sum(y_i^2+C^2(1-r_i))}.
+\end{align*}
+and noting that $x_i=y_ir_i +C(1-r_i)$, $x_i^2=y_i^2r_i+C^2(1-r_i))$, we have
+\begin{equation*}
+L(\theta)=\frac{\prod_{i=1}^{n}{(x_i - C(1-r_i))}}{\theta^{\sum_{i=1}^{n}{r_i}}} e^{-\frac{1}{2\theta}\sum_{i=1}^{n}{x_i^2}},
+\end{equation*}
+The corresponding loglikelihood is
+\begin{equation*}
+\log L(\theta)= \sum_{i=1}^{n}{log(x_i - C(1-r_i))} -\sum_{i=1}^{n}{r_i}log\theta - \frac{1}{2\theta}\sum_{i=1}^{n}{x_i^2},
+\end{equation*}
+Thus we have
+\begin{equation*}
+\frac{\text{d}}{\text{d}\theta}\log L(\theta)=\frac{-\sum_{i=1}^{n}r_i}{\theta} + \frac{1}{2\theta^2}\sum_{i=1}^{n}x_i^2,
+\end{equation*}
+leading to
+\begin{equation*}
+\widehat{\theta}_{\text{MLE}}=\frac{\sum_{i=1}^{n}X_i^2}{2\sum_{i=1}^{n} R_i}.
+\end{equation*}
+
+## (b)
+We have
+\begin{equation*}
+\frac{\text{d}^2}{\text{d}\theta^2}\log L(\theta) = \frac{\sum_{i=1}^{n}r_i}{\theta^2} - \frac{1}{\theta^3}\sum_{i=1}^{n}{x_i^2}
+\end{equation*}
+
+The expected information is
+$$
+I(\theta)= -E(\frac{\sum_{i=1}^{n}{r_i}}{\theta^2} - \frac{1}{\theta^3}\sum_{i=1}^{n}{x_i^2})
+=-\frac{E(R)}{\theta^2} + \frac{1}{\theta^3}nE(X^2)
+$$
+Note that $R$ is a binary random variable and so
+
+\begin{align*}
+E(R)&=1\times\Pr(R=1)+0\times\Pr(R=0)\\
+&=\Pr(R=1)\\
+&=\Pr(Y\leq C)\\
+&=F(C;\theta)\\
+&=1-e^{-\frac{C^2}{2*\theta}}.
+\end{align*}
+
+Also,
+\begin{align*}
+E(X^2) &= \int_0^C y^2f(y;\theta) {\rm d}y + \int_C^{+\infty} C^2f(y;\theta) {\rm d}y \\
+&= -C^2e^{-\frac{C^2}{2\theta}} + 2\theta(1-e^{-\frac{C^2}{2\theta}}) + C^2e^{-\frac{C^2}{2\theta}} \\
+&= 2\theta(1-e^{-\frac{C^2}{2\theta}})
+\end{align*}
+
+Therefore,
+\begin{align*}
+I(\theta) &= -\frac{n(1-e^\frac{-C^2}{2\theta})}{\theta^2} + 2\frac{n(1-e^\frac{-C^2}{2\theta})}{\theta^2}\\
+&= \frac{n(1-e^\frac{-C^2}{2\theta})}{\theta^2}
+\end{align*}
+
+## (c)
+Appealing to the asymptotic normality of the maximum likelihood estimator,
+$$
+\theta \sim N(\widehat{\theta}_{\text{MLE}},I(\theta)^{-1})
+$$
+so
+$$
+\theta \sim N\left(\frac{\sum_{i=1}^{n}X_i^2}{2\sum_{i=1}^{n} R_i},\frac{\theta^2}{n(1-e^\frac{-C^2}{2\theta})}\right)
+$$
+$$
+\frac{\hat\theta-\mu_0}{\sigma}\sim N(0,1)
+$$
+It's known that $\Phi_{0.975}=1.96$. So:
+$$
+[\mu_0-1.96\sigma,\quad \mu_0+1.96\sigma]
+$$
+There fore
+$$
+\frac{\sum_{i=1}^nX_i^2}{2\sum_{i=1}^{n}R_i}\pm 1.96\sqrt{(\frac{n(1-e^{-C^2/2\theta})}{\theta^2})^{-1})}\\
+=\frac{\sum_{i=1}^n X_i^2}{2\sum_{i=1}^{n}R_i}\pm 1.96(\frac{\theta}{\sqrt{n(1-e^{-C^2/2\theta})}})
+$$
+
+# Question 2
+## (a)
+For the censored observations, it is $Y < D$ so its contribution to the likelihood is 
+$$
+\Pr(Y<D;\mu,\sigma^2)=F(D;\mu,\sigma^2)=\Phi(D;\mu,\sigma^2)
+$$
+Therefore, the likelihood of the observed data is:
+\begin{align*}
+L(\mu,\sigma|^2\pmb{x,r}) &= \prod_{i=1}^{n}\left\{[f(y_i;\theta)]^{r_i}[F(D;\theta)]^{1-r_i}\right\}\\
+&=\prod_{i=1}^{n}\left\{[\phi(x_i;\mu,\sigma^2)]^{r_i}[\Phi(D;\mu,\sigma^2)]^{1-r_i}\right\}.
+\end{align*}
+when $x_i = D$ then $r_i = 0$, $x_i \neq D$ then $r_i = 1$ that is $(1-r_i) = 0$, therefore
+$$
+L(\mu,\sigma|^2\pmb{x,r}) = \prod_{i=1}^{n}\left\{[\phi(x_i;\mu,\sigma^2)]^{r_i}[\Phi(x_i;\mu,\sigma^2)]^{1-r_i}\right\}
+$$
+The corresponding loglikelihood is
+$$
+\log{L(\mu,\sigma|^2\pmb{x,r})} = \sum_{i=1}^{n}\left\{r_i\log{\phi(x_i;\mu,\sigma^2)} + (1-r_i)\log{\Phi(x_i;\mu,\sigma^2)}\right\}
+$$
+
+## (b)
+```{r Question2, warning = FALSE}
+library(maxLik)
+
+load("dataex2.Rdata")
+
+X = dataex2$X
+R = dataex2$R
+n = length(X)
+
+loglike = function(mu){
+  # asignment the list
+  pro = rep(0,n)
+  # caculate the probability and save it in the 'pro' list
+  for (i in 1:n) {
+    pro[i] = R[i]*log(dnorm(X[i],mu,1.5)) + (1-R[i])*log(pnorm(X[i],mu,1.5))
+  }
+  # sum the total value
+  pro_total = sum(pro)
+  return(pro_total)
+}
+# transform the max to min
+neglog <- function(mu){
+  -loglike(mu)
+}
+# function 'optim' result
+mu.opt = optim(1,neglog)
+# function 'maxLike' result
+mu.maxl = maxLik(logLik = loglike,start = c(1))
+summary(mu.maxl)
+
+```
+
+\begin{table}[h]
+\begin{tabular}{lllll}
+function &         &  &  &  \\
+opt      & 5.53125 &  &  &  \\
+maxL     & 5.5328  &  &  &  \\
+         &         &  &  & 
+\end{tabular}
+\end{table}
+
+Therefore, the maximum likelihood estimate of $\mu$ based on the data available is 5.53.
+
+# Question 3
+
+## (a)
+Ignorable, because
+$$
+logit{Pr(R=0|y_1,y_2,\theta,\psi)} = \psi_0+ \psi_1 y_1,\psi=(\psi_0,\psi_1)\  distinct\  from\ \theta
+$$
+$logit{Pr(R=0|y_1,y_2,\theta,\psi)}$ is related to $y_1$, not $y_2$, so $Y_2$ is MAR, also, $\psi=(\psi_0,\psi_1)$ distinct from $\theta$, the joint parameter space of $(\psi,\theta)$ is the product of the parameter space $\Psi$ and $\Theta$, therefore, the missing data mechanism is ignorable for likelihood inference.
+
+## (b)
+Unignorable, because
+$$
+logit{Pr(R=0|y_1,y_2,\theta,\psi)} = \psi_0+ \psi_1 y_2,\psi=(\psi_0,\psi_1)\  distinct\  from\ \theta
+$$
+$logit{Pr(R=0|y_1,y_2,\theta,\psi)}$ is related to $y_2$, so $Y_2$ is MNAR, therefore, the missing data mechanism is unignorable for likelihood inference.
+
+## (c)
+Unignorable, because
+$$
+logit{Pr(R=0|y_1,y_2,\theta,\psi)} = 0.5(\mu_1+ \psi y_1),\psi\  distinct\  from\ \theta
+$$
+$logit{Pr(R=0|y_1,y_2,\theta,\psi)}$ is related to $mu_1$, the parameter for missingness mechanism and for data model are not distinct, so the missing data mechanism is unignorable for likelihood inference.
+
+# Question 4
+In this case, we set y_min = {y_i}_{i=1}^{m} and y_obs = {y_i}_{i=m+1}^{n}, the complete data likelyhood is
+$$
+L(\theta;y_{obs},y_{mis}) = \prod_{i=1}^{n}{p_i(\beta)^{y_i}(1-p_i(\beta))^{1-y_i}}
+$$
+and therefore the corresponding log likelihood id given by
+$$
+\log(L(\theta;y_{obs},y_{mis}))=\sum_{i=1}^{n}{y_i\log(p_i(\beta))} + \sum_{i=1}^{n}{(1-y_i)\log(1-p_i(\beta))}
+$$
+We processed to the E-step
+\begin{align*}
+Q(\theta|\theta^{(t)}) &= E_{Y_i}[\log{L(\theta;y_{obs},y_{mis}|y_{obs},\theta^{(t)})}]\\
+&= \sum_{i=1}^{m}{E_{Y_{mis}}(y_i\log(p_i(\beta))|y_{obs},\theta^{(t)})}\\
+&+ \sum_{i=m+1}^{n}{y_i\log(p_i(\beta))}\\
+&+ \sum_{i=1}^{m}{E_{Y_{mis}}((1-y_i)\log(1-p_i(\beta))|y_{obs},\theta^{(t)})}\\
+&+ \sum_{i=m+1}^{n}{(1-y_i)\log(1-p_i(\beta))}
+\end{align*}
+Therefore
+\begin{align*}
+Q(\theta|\theta^{(t)})&= \sum_{i=1}^{m}{p_i(\beta)\log(p_i(\beta))}\\
+&+ \sum_{i=1}^{m}{((1-p_i(\beta^{(t)}))\log(1-p_i(\beta)))}\\
+&+ \sum_{i=m+1}^{n}{(y_i\log(p_i(\beta^{(t)}))+(1-y_i)\log(1-p_i(\beta)))}
+\end{align*}
+
+```{r question 4,warning=FALSE}
+load("dataex4.Rdata")
+
+# divide the data into missing data and oberbed data
+data.obs = na.omit(dataex4)
+data.mis = dataex4[is.na(dataex4$Y),]
+
+x.mis = data.mis$X
+y.mis = data.mis$Y
+
+x.obs = data.obs$X
+y.obs = data.obs$Y
+
+n.mis = length(x.mis)
+n.obs = length(x.obs)
+
+pro1 = rep(0,n.mis)
+pro2 = rep(0,n.obs)
+
+p = function(par,x){
+  beta0 = par[1]
+  beta1 = par[2]
+  re = exp(beta0+x*beta1)/(1+exp(beta0+x*beta1))
+  return(re)
+}
+
+# set the likelihood function
+loglike = function(par){
+  for (i in 1:n.mis) {
+    pro1[i] = p(beta.old,x.mis[i])*log(p(par,x.mis[i])) +
+      (1-p(beta.old,x.mis[i]))*log(1-p(par,x.mis[i]))
+  }
+  for (i in 1:n.obs) {
+    pro2[i] = y.obs[i]*log(p(par,x.obs[i])) +
+      (1-y.obs[i])*log(1-p(par,x.obs[i]))
+  }
+
+  pro_total = sum(pro1) + sum(pro2)
+  
+  return(pro_total)
+}
+
+# EM algorithm
+diff = 1
+beta.old = c(1,1)
+while(diff > 1e-7){
+  beta.maxl = maxLik(loglike,start = c(1,1))
+  beta = beta.maxl$estimate
+  # caculate the difference between old beta and new beta
+  diff = sum(abs(beta-beta.old)^2)
+  beta.old = beta
+
+}
+# show the result
+summary(beta.maxl)
+
+```
+
+Therefore, the maximum likelihood estimate of $\beta$ based on the data available is [0.98,-2.48].
+
+# Question 5
+## (a)
+Define an arguement $z=(z_1,\cdots,z_n)$\newline
+$z_i=1$ if $y_i$ belongs to the first component\newline
+$z_i=0$ if $y_i$ belongs to the second component\newline
+Then, the complete data likelihood is
+$$
+L(\theta|y,z)=\prod_{i=1}^{n}\left\{[pf_{lognormal}(y;\mu,\sigma^2)]^{z_i}[(1-p)f_{exp}(y;\lambda)]^{1-z_i}\right\}
+$$
+Therefore
+$$
+\log{L(\theta|y,z)}=\sum_{i=1}^{n}\left\{z_i(\log{p}+\log{f_{lognormal}(y;\mu,\sigma^2)})+(1-z_i)\log{f_{exp}(y;\lambda)]}\right\}
+$$
+For the E-step, we need to compute
+\begin{align*}
+Q(\theta|\theta^{(t)})&=E_Z[\log{L(\theta|y,z)}|y,\theta^{(t)}]\\
+&=\sum_{i=1}^{n}\left\{E(z_i|y,\theta^{(t)})(\log{p}+\log{f_{lognormal}(y;\mu,\sigma^2)})\right\}\\
+&+\sum_{i=1}^{n}\left\{(1-E(z_i|y,\theta^{(t)}))(\log{p}+\log{f_{exp}(y;\lambda)})\right\}
+\end{align*}
+Now
+\begin{align*}
+E(z_i|y,\theta^{(t)}) &= 1 \times Pr(z_i=1|y_i,theta^{(t)}) + 0 \times Pr(z_i=0|y_i,theta^{(t)})\\
+&=\frac{p^{(n)}f_{lognormal}(y;\mu^{(t)},(\sigma^{(t)})^2)}{p^{(n)}f_{lognormal}(y;\mu^{(t)},(\sigma^{(t)})^2)+(1-p)^{(n)}f_{exp}(y_i;\lambda^{(n)})}\\
+&=\tilde{p}_i^{(t)}
+\end{align*}
+Therefore, for $p$
+$$
+\frac{dQ(\theta|\theta^{(t)})}{dp}=\frac{1}{p}\sum_{i=1}^{n}{\tilde{p}_i^{(t)}} + \frac{1}{1-p}\sum_{i=1}^{n}{(\tilde{p}_i^{(t)}-n)}=0
+$$
+we get
+$$
+\frac{1}{p(1-p)}\sum_{i=1}{n}{\tilde{p}_i^{(t)}}=\frac{n}{1-p}
+$$
+therefore
+$$
+p^{(t+1)}=\frac{\sum_{i=1}^{n}{\tilde{p}_i^{(t)}}}{n}
+$$
+for $\mu$
+$$
+\frac{dQ(\theta|\theta^{(t)})}{d\mu}=\sum_{i=1}^{n}\left\{\tilde{p}_i^{(t)}\frac{df_{lognormal}(y;\mu,\sigma^2)}{d\mu}\frac{1}{f_{lognormal}(y;\mu,\sigma^2)}\right\}
+=\sum_{i=1}^{n}{\tilde{p}_i^{(t)}(\frac{1}{\sigma^2}(\log{y_i}-\mu))}=0
+$$
+we get
+$$
+\mu^{(t+1)}=\frac{\sum_{i=1}^{n}{(\tilde{p}_i^{(t)}\log{y_i})}}{\sum_{i=1}^{n}{\tilde{p}_i^{(t)}}}
+$$
+for $\sigma^2$
+$$
+\frac{dQ(\theta|\theta^{(t)})}{d\sigma^2}=\sum_{i=1}^{n}\left\{\tilde{p}_i^{(t)}\frac{df_{lognormal}(y;\mu,\sigma^2)}{d\sigma^2}\frac{1}{f_{lognormal}(y;\mu,\sigma^2)}\right\}=0
+$$
+therefore
+$$
+\sum_{i=1}^{n}{(\tilde{p}_i^{(t)}(-\sigma^2)+(\log{y_i}-\mu)^2)}=0
+$$
+we get
+$$
+(\sigma^{t+1})^2=\frac{\sum_{i=1}^{n}{(\tilde{p}_i^{(t)}(\log{y_i}-\mu^{(t+1)})^2)}}{\sum_{i=1}^{n}{\tilde{p}_i^{(t)}}}
+$$
+for $\lambda$
+$$
+\frac{dQ(\theta|\theta^{(t)})}{d\sigma^2}=-\sum_{i=1}^{n}\left\{\tilde{p}_i^{(t)}\frac{df_{exp}(y;\lambda)}{d\sigma^2}\frac{1}{f_{exp}(y;\lambda)}\right\}=-\sum_{i=1}^{n}{\tilde{p}_i^{(t)}\frac{1-y_i\lambda}{\lambda}}=0
+$$
+we get
+$$
+\lambda^{(t+1)}=\frac{\sum_{i=1}^{n}{(1-\tilde{p}_i^{(t)})}}{\sum_{i=1}^{n}{(1-\tilde{p}_i^{(t)}})y_i}
+$$
+In conclusion
+$$
+(p^{(t+1)},\mu^{(t+1)},(\sigma^{t+1})^2,\lambda^{(t+1)})=(\frac{\sum_{i=1}^{n}{\tilde{p}_i^{(t)}}}{n},\frac{\sum_{i=1}^{n}{(\tilde{p}_i^{(t)}\log{y_i})}}{\sum_{i=1}^{n}{\tilde{p}_i^{(t)}}},\frac{\sum_{i=1}^{n}{(\tilde{p}_i^{(t)}(\log{y_i}-\mu^{(t+1)})^2)}}{\sum_{i=1}^{n}{\tilde{p}_i^{(t)}}},\frac{\sum_{i=1}^{n}{(1-\tilde{p}_i^{(t)})}}{\sum_{i=1}^{n}{(1-\tilde{p}_i^{(t)}})y_i})
+$$
+
+## (b)
+
+```{r Question 5,warning=FALSE}
+load("dataex5.Rdata")
+max = 1000
+n = length(dataex5)
+
+y = dataex5
+log_y = log(dataex5)
+
+p_hat = function(y,p,mu,sigma,lambda){
+  p*dlnorm(y,mu,sigma) / (p*dlnorm(y,mu,sigma) + (1-p)*dexp(y,lambda))
+}
+# Iterate theta to generate the new theta
+change = function(theta){
+  p = theta[1]
+  mu = theta[2]
+  sigma = theta[3]
+  lambda = theta[4]
+  # Update theta value based on the above derivation
+  inter1 = inter2 = inter3 = inter4 = 0
+  for (i in 1:n){
+    inter1 = inter1 + p_hat(y[i],p,mu,sigma,lambda)
+    inter2 = inter2 + p_hat(y[i],p,mu,sigma,lambda)*log_y[i]
+    inter3 = inter3 + (1-p_hat(y[i],p,mu,sigma,lambda))*y[i]
+  }
+
+  p_new = inter1/n
+  mu_new = inter2/inter1
+  lambda_new = (n-inter1)/inter3
+
+  for (i in 1:n) {
+    inter4 = inter4 + p_hat(y[i],p,mu,sigma,lambda)*(log_y[i]-mu_new)^2
+  }
+  sigma_new = sqrt(inter4/inter1)
+
+  theta = c(p_new,mu_new,sigma_new,lambda_new)
+  return(theta)
+}
+
+theta = c(0.1,1,0.52,2)
+# EM algorithm
+for (i in 1:max) {
+  theta_new = change(theta)
+  diff = sum(abs(theta - theta_new)^2)
+  if (diff < 1e-7)
+    break
+  theta = theta_new
+}
+# show result
+result = data.frame('p' = theta[1],'mu'=theta[2],'sigma^2' = theta[3]^2,'lambda'=theta[4])
+result
+```
+```{r}
+library(ggplot2)
+
+pdf <- function(x,theta){
+  p = theta[1]
+  mu = theta[2]
+  sigma = theta[3]
+  lambda = theta[4]
+  
+  f.value = p*dlnorm(x,mu,sigma) + (1-p)*dexp(x,lambda)
+}
+# generate the data in parameters above
+x = seq(1,130,length.out = 500)
+y = pdf(x,theta)
+# save the given data and generate data
+data = data.frame(given = dataex5, gener = y, X=x)
+# plot the result
+ggplot(data) +
+  geom_histogram(aes(given,..density..),bins = 80) +
+  geom_line(aes(X,gener),colour='red') +
+  xlab('y')
+```
+
+As shown in the graph, model is consistent with the given data, the maximum likelihood estimates for $\theta$ is $[0.48,2.01,0.87,1.04]$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
