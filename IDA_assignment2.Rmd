@@ -195,7 +195,7 @@ $$
 $logit{Pr(R=0|y_1,y_2,\theta,\psi)}$ is related to $mu_1$, the parameter for missingness mechanism and for data model are not distinct, so the missing data mechanism is unignorable for likelihood inference.
 
 # Question 4
-In this case, we set y_min = {y_i}_{i=1}^{m} and y_obs = {y_i}_{i=m+1}^{n}, the complete data likelyhood is
+In this case, we set $y_{min} = (y_i)_{i=1}^{m}$ and $y_{obs} = (y_i)_{i=m+1}^{n}$, the complete data likelyhood is
 $$
 L(\theta;y_{obs},y_{mis}) = \prod_{i=1}^{n}{p_i(\beta)^{y_i}(1-p_i(\beta))^{1-y_i}}
 $$
@@ -213,9 +213,9 @@ Q(\theta|\theta^{(t)}) &= E_{Y_i}[\log{L(\theta;y_{obs},y_{mis}|y_{obs},\theta^{
 \end{align*}
 Therefore
 \begin{align*}
-Q(\theta|\theta^{(t)})&= \sum_{i=1}^{m}{p_i(\beta)\log(p_i(\beta))}\\
+Q(\theta|\theta^{(t)})&= \sum_{i=1}^{m}{p_i(\beta^{(t)})\log(p_i(\beta))}\\
 &+ \sum_{i=1}^{m}{((1-p_i(\beta^{(t)}))\log(1-p_i(\beta)))}\\
-&+ \sum_{i=m+1}^{n}{(y_i\log(p_i(\beta^{(t)}))+(1-y_i)\log(1-p_i(\beta)))}
+&+ \sum_{i=m+1}^{n}{(y_i\log(p_i(\beta))+(1-y_i)\log(1-p_i(\beta)))}
 \end{align*}
 
 ```{r question 4,warning=FALSE}
