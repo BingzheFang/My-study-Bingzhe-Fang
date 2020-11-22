@@ -427,10 +427,9 @@ ggplot(data) +
 
 As shown in the graph, model is consistent with the given data, the maximum likelihood estimates for $\theta$ is $[0.48,2.01,0.87,1.04]$
 
+Link for Code:   [IDA assignment 2 Code](https://github.com/BingzheFang/My-study-Bingzhe-Fang.git)
 
-
-
-
+https://github.com/BingzheFang/My-study-Bingzhe-Fang.git
 
 
 
