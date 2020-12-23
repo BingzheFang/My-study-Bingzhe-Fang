@@ -335,12 +335,13 @@ plot(imp5, layout = c(4,4))
 ```
 \centerline{\textbf{Figure 5.2} `chainMean` and `chainVar` in the imputation process}
 
-```{r question 5 6}
+```{r question 5 6, fig.dim=c(12,6),fig.align="center"}
 densityplot(imp5)
 ```
-\centerline{\textbf{Figure 5.3} `chainMean` and `chainVar` in the imputation process}
+\centerline{\textbf{Figure 5.3} Densityplot for the continuous variable}
 
-When considering binary or categorical variables, `propplot` function is useful, shown in the figure 5.4, there are some discrepancies between the observed and imputed values for educ, but it has only one missing values, it is not too problematic. After doing this, we can start to the analysis of the imputed data and fit our substantive model of interest.
+When considering binary or categorical variables, `propplot` function is useful, shown in the figure 5.4, there are some discrepancies between the observed and imputed values for `educ`, but it has only one missing values, it is not too problematic. The variable `sex` is also not good, only 21/500 missing, so there is no need to worry too much.
+After doing this, we can start to the analysis of the imputed data and fit our substantive model of interest.
 
 ```{r question 5 7}
 source_url("https://gist.githubusercontent.com/NErler/0d00375da460dd33839b98faeee2fdab/raw/c6f537ecf80eddcefd94992ec7926aa57d454536/propplot.R")
@@ -355,14 +356,13 @@ fit = with(imp5, lm(wgt ~ gender + age + hgt + WC))
 summary(fit$analyses[[1]])
 ```
 
-The model fit well, we can start to pool the result, shown in the table 6.1, the coefficient for the model is : $(-101.28,-1.34,-0.16,52.)$
+The model fit well, we can start to pool the result, shown in the table 5.5, the coefficient for the model is : $(-101.28,-1.34,-0.16,52.)$
 
 ```{r question 6 9}
 ests = pool(fit)
 table.6.1 = summary(ests,conf.int = TRUE)
 table.6.2 = data.frame("Estimate"=table.6.1[,2], "lq" = table.6.1[,7], "uq"=table.6.1[,8])
 ```
-\centerline{\textbf{Figure 6.1} summary for the model}
 
 ```{r table 6.2 show,echo=FALSE}
 rownames(table.6.2) = c("$\\beta_0$", "$\\beta_1$","$\\beta_2$", "$\\beta_3$","$\\beta_4$")
@@ -371,9 +371,15 @@ knitr::kable(table.6.2, escape = FALSE, digits = 3,
              caption = "Regression coefficient estimates and 95% CI")
 ```
 
-\centerline{\textbf{Figure 6.1} Regression coefficient estimates and corresponding CI for the model}
+\centerline{\textbf{Figure 5.5} Regression coefficient estimates and corresponding CI for the model}
+
+After changing the seed and repeat the analyze, the result will flacture slightly, choose m = 30 is not very large to make the result stable because the `fmi` is not small enough to ignore the influence of M. However, the dataset has 50 rows and 12 variables, running such object in large dataset will take a lot of time. So here I just use M = 30 in parctise, but M = 50 or 100 might be better, in practical application, when impute and analyze this dataset, we should choose larger M to get more scientific conclusions.  
 
 
+
+
+RMD file in GitHub:  
+https://github.com/BingzheFang/My-study-Bingzhe-Fang.git
 
 
 
