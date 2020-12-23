@@ -1,0 +1,379 @@
+---
+title: "Assignment3"
+author: "BingzheFang"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE)
+
+library(mice)
+library(JointAI)
+data('nhanes')
+load('dataex2.Rdata')
+load('dataex4.Rdata')
+load('NHANES2.Rdata')
+require(devtools)
+require(reshape2)
+require(RColorBrewer)
+require(ggplot2)
+```
+
+## Question 1 (a)
+
+Dataset 'nhanes' has 4 columes: age, hyp, chl and bmi, age is complete data and some of data in hyp, chl and bmi are missing.
+
+```{r dataset show,echo=FALSE}
+knitr::kable(head(nhanes,5))
+```
+
+12 cases in 'nhanes' is incomplete, the percentage of incomplete cases is 12/25 = 48%.
+
+```{r question 1 a}
+knitr::kable(md.pattern(nhanes,plot = FALSE))
+```
+
+\centerline{\textbf{Table 1.1} Returns from `md.pattern` function }
+
+```{r question 1 a.2}
+data.obs = na.omit(nhanes)
+# checking the percentage of missing values
+na.persentage = (nrow(nhanes) - nrow(data.obs))/nrow(nhanes)
+paste('The percentage of incomplete cases is:', na.persentage*100,'%')
+```
+
+## Question 1 (b)
+
+Use `mice` function to impute the dataset with 5 donors. The Figure 1.1 shows the distribution of these four variables. The observed values are blue dots, and the imputed values are red dots. The age panel contains only blue dots, because age is already complete data. Also the red dots follow the blue dots quite well, including gaps in the distribution.
+
+```{r question 1 b, fig.dim=c(10,2.5),fig.align="center"}
+imp = mice(nhanes,printFlag = FALSE, seed = 1) 
+stripplot(imp,pch=19,cex=1,alpha=.4)
+```
+
+\centerline{\textbf{Figure 1.1} Stripplot of four variables}
+
+set the normal linear regression model:
+$$
+bmi = \beta_0 + \beta_1 age + \beta_2 hyp + \beta_3 chl + \varepsilon, \ \varepsilon \sim N(0,1)
+$$
+in step 2, predict bmi from age, hyp, and chl.
+
+To see the proportion of the total variance that is attributable to the missing data for each parameter, statistics $\lambda$ is useful, $\lambda = (B + B/m)/V$, we can easily find the $\lambda$ value using `pool` funtion, shown in the Table 1.2. The result shows that `age` parameter appear to be most affected by the nonresponse.
+
+```{r question 1 b analyze}
+fit = with(imp,lm(bmi ~ age + hyp + chl))
+table.1.2 = t(data.frame(pool(fit)$pooled$lambda))
+```
+
+```{r tabel1_2 show, echo=FALSE}
+colnames(table.1.2) = c("Intercept","age","hyp","chl")
+rownames(table.1.2) = c("$\\lambda$")
+knitr::kable(table.1.2,digits = 3)
+```
+
+\centerline{\textbf{Table 1.2} $\lambda$ value in model}
+
+## Question 1 (c)
+
+Set seed = {2,3,4,5,6} and repeat the analysis, get the $\lambda$ value and shown in the table 1.3. When seed = {2,3,6}, the conclusion remain the same, `age` parameter appear to be most affected by the nonresponse, but when seed = {4,5}, `chl` and `hyp` is most affected respectively. It shows that when m = 5, the change of seed have effect on $\lambda$ value.
+
+```{r question 1 c}
+lam2 = t(data.frame(pool(with(mice(nhanes,printFlag = FALSE, seed = 2) ,lm(bmi ~ age + hyp + chl)))$pooled$lambda))
+lam3 = t(data.frame(pool(with(mice(nhanes,printFlag = FALSE, seed = 3) ,lm(bmi ~ age + hyp + chl)))$pooled$lambda))
+lam4 = t(data.frame(pool(with(mice(nhanes,printFlag = FALSE, seed = 4) ,lm(bmi ~ age + hyp + chl)))$pooled$lambda))
+lam5 = t(data.frame(pool(with(mice(nhanes,printFlag = FALSE, seed = 5) ,lm(bmi ~ age + hyp + chl)))$pooled$lambda))
+lam6 = t(data.frame(pool(with(mice(nhanes,printFlag = FALSE, seed = 6) ,lm(bmi ~ age + hyp + chl)))$pooled$lambda))
+
+table.1.3 = rbind(lam2,lam3,lam4,lam5,lam6)
+```
+
+```{r table1_3 show,echo=FALSE}
+colnames(table.1.3) = c("Intercept","age","hyp","chl")
+rownames(table.1.3) = c("$\\lambda_2$","$\\lambda_3$","$\\lambda_4$","$\\lambda_5$","$\\lambda_6$")
+knitr::kable(table.1.3,digits = 3)
+```
+\centerline{\textbf{Table 1.3} $\lambda$ value in model in different seed}
+
+When it comes to the summary for the model with different seeds {1,2,3,4,5,6}, as shown in the Table 1.4, different seed will affect the results of the model, but the results between the models fluctuate, but not very large. Generally speaking, in the case of m = 5, the transformation of seed will have an impact on the results of the model, including $\lambda$, confidence intervals (CI) and std.error, but the impact is limited.
+
+```{r qusetion 1 c test}
+summ = function(seed,m){summary(pool(with(mice(nhanes, printFlag = FALSE, seed = seed, m = m), 
+                                lm(bmi ~ age + hyp + chl))),conf.int = TRUE)[, c(2, 3, 7, 8)]}
+sum1.1=summ(1,5); sum1.2=summ(2,5); sum1.3=summ(3,5)
+sum1.4=summ(4,5); sum1.5=summ(5,5); sum1.6=summ(1,6)
+```
+
+```{r table 1.4 show,echo=FALSE}
+empty = matrix(NA,4,1)
+colnames(empty) = '||'
+opts = options(knitr.kable.NA = "")
+knitr::kable(cbind(sum1.1,empty,sum1.2),digits = 4)
+knitr::kable(cbind(sum1.3,empty,sum1.4),digits = 4)
+knitr::kable(cbind(sum1.5,empty,sum1.6),digits = 4)
+```
+\centerline{\textbf{Table 1.4} Summary for model (m=5) with seed = {1,2,3,4,5,6}}
+
+## Question 1 (d)
+
+The arguement `m` is another important factors that will affect the results, when change it from 5 to 100, and repeat the analysis, table 1.5 shows the summary of model with seed  = {1,2,3,4,5,6} when m = 100. We can find that when m increase to 100, the result becomes more stable, in different seed, the estimate and confidence intervals remain around $20.4$ and $[12.3,28.3]$, but when m = 5, results will fluctuate when seed change, which is not a good thing. 
+
+```{r question 1 d}
+sum2.1=summ(1,100); sum2.2=summ(2,100); sum2.3=summ(3,100)
+sum2.4=summ(4,100); sum2.5=summ(5,100); sum2.6=summ(1,100)
+```
+
+```{r table 1.5 show,echo=FALSE}
+knitr::kable(cbind(sum2.1,empty,sum2.2),digits = 4)
+knitr::kable(cbind(sum2.3,empty,sum2.4),digits = 4)
+knitr::kable(cbind(sum2.5,empty,sum2.6),digits = 4)
+```
+\centerline{\textbf{Table 1.5} Summary for model (m=100) with seed = {1,2,3,4,5,6}}
+
+The same situation appear in $\lambda$ value of the model, when increase m to 100, the $\lambda$ also remain stable, shown in table 1.6, `age` is most affected by the nonresponse when seed change, we can get the same conlusion when seed change.
+
+```{r question 1 d 2}
+lam1 = t(data.frame(pool(with(mice(nhanes,printFlag=FALSE, seed=1,m=100) ,lm(bmi~ age + hyp + chl)))$pooled$lambda))
+lam2 = t(data.frame(pool(with(mice(nhanes,printFlag=FALSE, seed=2,m=100) ,lm(bmi~ age + hyp + chl)))$pooled$lambda))
+lam3 = t(data.frame(pool(with(mice(nhanes,printFlag=FALSE, seed=3,m=100) ,lm(bmi~ age + hyp + chl)))$pooled$lambda))
+lam4 = t(data.frame(pool(with(mice(nhanes,printFlag=FALSE, seed=4,m=100) ,lm(bmi~ age + hyp + chl)))$pooled$lambda))
+lam5 = t(data.frame(pool(with(mice(nhanes,printFlag=FALSE, seed=5,m=100) ,lm(bmi~ age + hyp + chl)))$pooled$lambda))
+lam6 = t(data.frame(pool(with(mice(nhanes,printFlag=FALSE, seed=6,m=100) ,lm(bmi~ age + hyp + chl)))$pooled$lambda))
+
+table.1.6 = rbind(lam1,lam2,lam3,lam4,lam5,lam6)
+```
+
+```{r table1_6 show,echo=FALSE}
+colnames(table.1.6) = c("Intercept","age","hyp","chl")
+rownames(table.1.6) = c("$\\lambda_1$","$\\lambda_2$","$\\lambda_3$","$\\lambda_4$","$\\lambda_5$","$\\lambda_6$")
+knitr::kable(table.1.6,digits = 3)
+```
+\centerline{\textbf{Table 1.6} $\lambda$ value in model in different seed when m = 100}
+
+The ratio of the variance can be writen as:
+$$
+\frac{\bar{U} + (1 + \frac{1}{M})B}{\bar{U} + B} = 1 + \frac{1}{M}\frac{B}{\bar{U}+B}
+$$
+The table 1.7 shows that `fmi`: $\frac{B}{\bar{U}+B}$ is not small, so a small M is not ok, we should choose a bigger M = 100.
+
+```{r question 1 d 3}
+table.1.7 = t(data.frame(pool(fit)$pooled$fmi))
+colnames(table.1.7) = c("Intercept","age","hyp","chl")
+rownames(table.1.7) = 'fmi'
+knitr::kable(table.1.7,digits = 3)
+```
+\centerline{\textbf{Table 1.7} $fmi$ value in model}
+
+## Question 2
+
+Choose to use two method to impute the incomplete data: (i) Not acknowledge parameter uncertainty: stochastic regression imputation, (ii) Acknowledge parameter uncertainty: stochastic regression with bootstrap method. The empirical coverage probability is: 88 % in first method, when use bootstrap, the empirical coverage probability increase to 95%. The result shows that the bootstrape methods is better, acknowledge parameter uncertainty can improve the perfomance of model in this case.  
+Denote that $m$ rows of observed data and $n-m$ rows of missint data. It will be an improper MI when we use `norm` because the same estimates are used for imputing all M copies of the dataset:
+$$
+\hat{y}_{mis}^{(m)} = \hat{\beta}_{0} + X_{mis}\hat{\beta}_{1} + \varepsilon, \ \varepsilon \sim N(0,(\hat{\sigma})^2),\ m=1,\cdots,M
+$$
+Where $\hat{\beta}_{0},\hat{\beta}_{1},\hat{\sigma}^2$ are estimates obtained from fitting a normal linear regression model to $(y_{obs},X_{obs})$, also the variance of the error term are known with certainty. However, when we use bootstrap method, it will be a proper method, because the parameters are estimated based on a bootstrap sample of the complete cases: 
+$$
+\hat{y}_{mis}^{(m)} = \hat{\beta}_{0}^{(m)} + X_{mis}\hat{\beta}_{1}^{(m)} + \varepsilon, \ \varepsilon \sim N(0,(\hat{\sigma}^{(m)})^2),\ m=1,\cdots,M
+$$
+Where $\hat{\beta}_{0}^{(m)},\hat{\beta}_{1}^{(m)},(\hat{\sigma}^{(m)})^2$ are the least squares/maximum likelihood estimates from a bootstrap sample of the $(y_{obs},X_{obs})$. In fact, for different sample from the same population, the variance of the error term would be different, the amount of extra variability is strongly related to the sample size, with smaller samples yielding more variable estimates. In this case, sample size = 100, the total variance $V^{MI}$ are too small, as a result, the confidence intervals based on $V^{MI}$ would be too narrow: 0.809 vs 0.983.  
+In conlusion, when it is small size dataset like this case, it is better to use proper MI mothod, like bootstrape, to reflect the parameters’ uncertainty, when the size is large, it it ok to use improper MI method.
+
+```{r question 2 a}
+t1 = 0; t2 = 0; l1 = 0; l2 = 0
+for (i in 1:100) {
+  CI1 = summary(pool(with(mice(dataex2[,,i], method = 'norm.nob', printFlag = FALSE, seed = 1, m = 20), 
+                                  lm(Y ~ X))),conf.int = TRUE)[2, c(7, 8)]
+  CI2 = summary(pool(with(mice(dataex2[,,i], method = 'norm.boot', printFlag = FALSE, seed = 1, m = 20), 
+                                  lm(Y ~ X))),conf.int = TRUE)[2, c(7, 8)]
+  if(3 > CI1[1,1] & 3 < CI1[1,2]){t1 = t1+1}
+  if(3 > CI2[1,1] & 3 < CI2[1,2]){t2 = t2+1}
+  l1 = l1 + CI1[1,2] - CI1[1,1]
+  l2 = l2 + CI2[1,2] - CI2[1,1]
+}
+p1 = t1/100; p2 = t2/100; l1 = round(l1/100,3); l2 = round(l2/100,3)
+paste('The empirical coverage probability is:', p1*100,'% in first method')
+paste('The empirical coverage probability is:', p2*100,'% in second method')
+paste('The average length of CI is:', l1,'in first method')
+paste('The average length of CI is:', l2,'in second method')
+```
+
+## Question 3 
+
+Set the linear model:
+$$
+y_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} +\cdots+ \beta_p x_{pi} + \varepsilon, \ \varepsilon \sim N(0,1),\  i = 1,2,\cdots,N
+$$
+Where the sample dimension is p and the sample size is N, set the m = M. In step 2, for each fitted model, we have:  
+$(\beta_i^{(1)},\beta_i^{(2)},\cdots \beta_i^{(M)})$ for $\beta_i,\ i=1,2,\cdots p$  
+compute the predicted values from each fitted model:
+$$
+y_i^{(j)} = \beta_0^{(j)} + \beta_1^{(j)} x_{1i} + \beta_2^{(j)} x_{2i} +\cdots+ \beta_p^{(j)} x_{pi} = \sum_{k=0}^{p}{\beta_k^{(j)}x_{ki}},\ i = 1,\cdots N,\ j = 1,\cdots M
+$$
+Where $x_{0i} = 1, \ for\ i=1 \cdots N$. In step 3, according to Rubin’s rule for point estimates:
+$$
+y_i = \frac{1}{M}\sum_{j=1}^M{y_i^{(j)}} = \frac{1}{M}\sum_{j=1}^M{\sum_{k=0}^{p}{\beta_k^{(j)}x_{ki}}} \\
+= \sum_{k=0}^{p}{\left((\frac{1}{M}\sum_{j=1}^M{\beta_k^{(j)}})x_{ki}\right)} \\
+= \sum_{k=0}^{p}{\left(\beta_k^* x_{ki}\right)}
+$$
+$\frac{1}{M}\sum_{j=1}^M{\beta_k^{(j)}}$ can be regarded as pooling the regression coefficients from each fitted model using Rubin’s rule and then we compute the predicted values using such coefficients, which is exactly what the latter part of the formula above shows, and it is also the strategy (ii), as a result, (i) and (ii) get the same result.
+
+## Question 4 (a)
+
+In the first strategy: *Impute, then transform*, impute the original, and transform the completed original afterwards, the result shows in the table 4.1. It is not a good estimate, especially in $\beta_1$ and $\beta_3$. In this method, such strategy can keep the consistency among transformation, in other words, it can make sure $x_1*x_2=x_1.x_2$, where $x_i.x_2$ is the interaction between $x_1$ and $x_2$, however, during the inputation process, it did not consider the interaction, which did not fit the model, this will lead to estimation bias.
+
+```{r question 4 a}
+table.4.1 = summary(pool(with(mice(dataex4, printFlag = FALSE, seed = 1, m = 50), 
+                  lm(y ~ x1+x2+x1*x2))),conf.int = TRUE)[, c(2,7, 8)]
+```
+
+```{r table 4.1 show,echo=FALSE}
+rownames(table.4.1) = c('$\\beta_0$','$\\beta_1$','$\\beta_2$','$\\beta_3$')
+knitr::kable(table.4.1,digits = 3)
+```
+\centerline{\textbf{Table 4.1} 95 \% confidence intervals for model a}
+
+## Question 4 (b)
+
+In the second strategy: *passive imputation*, it is a special method to solve such problem, which can maintain the consistency among different transformations of the same data. As a result, it can make sure that the transformation holds between the imputed values of the original and transformed versions.  
+In order to realize the passive imputation, first thing need to do is set the method and predic matrix. Change the method for the interaction $x_1.x_2$ to `I(x1*x2)` to keep the relationship. Also the predict matrix should be change, `[c("x1", "x2"), "x1.x2"]` should be set to 0, because $x_1$ and $x_2$ is not ditermined by $x_1.x_2$, the pridict matrix shows below:
+
+```{r question 4 b,message=FALSE}
+dataex4.b = cbind(dataex4, x1.x2 = dataex4$x1*dataex4$x2)
+imp4.b = mice(dataex4.b, max = 0, print = FALSE, seed = 1, m = 50)
+meth4.b = imp4.b$meth
+meth4.b["x1.x2"] = "~I(x1*x2)"
+pred4.b = imp4.b$pred
+pred4.b[c("x1", "x2"), "x1.x2"] = 0
+knitr::kable(pred4.b)
+```
+
+The result shows in the table 4.2, the estimate becomes better, there are still some bias in $\beta_1$ and $\beta_3$, but already improved a lot, compared with strategy 1.
+
+```{r question 4 b 2}
+imp4.b2 = mice(dataex4.b, meth = meth4.b, pred = pred4.b, seed = 1,  m = 50, print = FALSE)
+table.4.2 = summary(pool(with(imp4.b2, lm(y ~ x1+x2+x1.x2))),conf.int = TRUE)[, c(2, 7, 8)]
+```
+
+```{r table 4.2 show,echo=FALSE}
+rownames(table.4.2) = c('$\\beta_0$','$\\beta_1$','$\\beta_2$','$\\beta_3$')
+knitr::kable(table.4.2,digits = 3)
+```
+\centerline{\textbf{Table 4.2} 95 \% confidence intervals for model b}
+
+In the third strategy: *just another variable*: transform the incomplete original and impute the transformed version, and the result shows in the table 4.3. It is also a better result, every codefficient is estimated well.
+
+```{r question 4 c}
+dataex4.c = cbind(dataex4, x1.x2 = dataex4$x1 * dataex4$x2)
+table.4.3 = summary(pool(with(mice(dataex4.c, printFlag = FALSE, seed = 1, m = 50), 
+                  lm(y ~ x1+x2+x1.x2))),conf.int = TRUE)[, c(2,7, 8)]
+```
+
+```{r table 4.3 show,echo=FALSE}
+rownames(table.4.3) = c('$\\beta_0$','$\\beta_1$','$\\beta_2$','$\\beta_3$')
+knitr::kable(table.4.3,digits = 3)
+```
+\centerline{\textbf{Table 4.3} 95 \% confidence intervals for model c}
+
+## Question 4 (d)
+
+In this case, according to the result, the third strategy is good, but actually because it repard the interaction as a new variable and inpute it, it can not follow the role: $x_1*x_2=x_1.x_2$, it does not fit the model's assumptions. In some situation, like this case, it fit well, but sometimes, it is not very suitable. It is better to use passive inputation because the transformation can keep between the imputed values of the original and transformed versions.
+
+## Question 5 
+
+The data set is a subset of National Health and Nutrition Examination Survey (NHANES), it contains 12 variables and 500 samples. We can use `summary` function to have a quick idea about min/max/mean/quantiles of the observed data in each variable and the number of missing values.
+```{r question 5 1}
+dim(NHANES2)
+summary(NHANES2)
+```
+We are interested in the following linear regression model:
+ 
+$$
+\text{wgt} = \beta_0 + \beta_1 \text{gender} + \beta_2 \text{age} + \beta_3\text{hgt} +\beta_4\text{WC} +\varepsilon, \quad \varepsilon\sim\text{N}(0,\sigma^2).
+$$
+ 
+We can also use `md_pattern` function to inspect the missing data patterns, shown in figure 5.1. There are 5 variables are complete data: {wgt,gender,age,race,hypten}, and other 7 variables have missing data. There are 89 cases are incomplete, the percentage of the incomplete cases is: 17.8%.
+
+```{r question 5 2,fig.dim=c(15,8),fig.align="center"}
+data5.obs = na.omit(NHANES2)
+# checking the percentage of missing values
+na.persentage5 = (nrow(NHANES2) - nrow(data5.obs))/nrow(NHANES2)
+paste('The percentage of incomplete cases is:', na.persentage5*100,'%')
+
+md_pattern(NHANES2, pattern = FALSE, color = c('#34111b', '#e30f41'))
+```
+\centerline{\textbf{Figure 5.1} Missing data patterns in NHANES2 data}
+
+The difalt method in `mice` function is predictive mean matching (pmm), if we want to use other methods, like normal linear regression model for imputing the missing values, we should know the distribution of the observed parts of these variables, shown in the table 5.1. None of the variables are completely close to normal distribution, most of the distributions have long tails. It is reasonable to use `pmm` in all 12 variables.
+
+```{r question 5 3,fig.dim=c(12,8),fig.align="center"}
+par(mar = c(3, 3, 2, 1), mgp = c(2, 0.6, 0)) 
+plot_all(NHANES2, breaks = 30, ncol = 4)
+```
+\centerline{\textbf{Figure 5.1} Distribution of the observed parts of 12 variables}
+
+Now we start to impute the data usint `mice` function. Set seed = 1 to make the result remain the same and increase m from 5 to 30 to make the results more stable, maxit was set to be 20 to check the convergence of the chains of imputed values
+
+```{r question 5 3.2}
+imp5 = mice(NHANES2, maxit = 20, m = 30, seed = 1, printFlag = FALSE)
+```
+
+According to the return from `loggedEvents` function, no problem was detected during the imputation in the object.
+
+```{r question 5 4}
+imp5$loggedEvents
+```
+
+The convergence of MICE algorithm is another important thing to be checked in the object because only when algorithm has converged can we get correct results. By using `plot` function, we can check `chainMean` and `chainVar` in imputation process, shown in figure 5.2. The traceplots illustrate that algorithm appears to have converged in all incompete variables.
+
+Now that we know that the iterative algorithm appears to have converged for all variables that were imputed, we can compare the distribution of the imputed values against the distribution of the observed values. We start doing that for the continuous variables.
+
+```{r question 5 5}
+plot(imp5, layout = c(4,4))
+```
+\centerline{\textbf{Figure 5.2} `chainMean` and `chainVar` in the imputation process}
+
+```{r question 5 6}
+densityplot(imp5)
+```
+\centerline{\textbf{Figure 5.3} `chainMean` and `chainVar` in the imputation process}
+
+When considering binary or categorical variables, `propplot` function is useful, shown in the figure 5.4, there are some discrepancies between the observed and imputed values for educ, but it has only one missing values, it is not too problematic. After doing this, we can start to the analysis of the imputed data and fit our substantive model of interest.
+
+```{r question 5 7}
+source_url("https://gist.githubusercontent.com/NErler/0d00375da460dd33839b98faeee2fdab/raw/c6f537ecf80eddcefd94992ec7926aa57d454536/propplot.R")
+propplot(imp5)
+```
+\centerline{\textbf{Figure 5.4} propplot for the model}
+
+At this stage, we should also check that our model is fitting well the (completed) data. Choose one dataset to check and show the summary. After analyzing the model using `with` function, it shows that 3 variables: age, hgt and WC is significant.The $R^2=0.8563$ which is near to 1, it means that the model is appropriate.
+
+```{r question 6 8}
+fit = with(imp5, lm(wgt ~ gender + age + hgt + WC))
+summary(fit$analyses[[1]])
+```
+
+The model fit well, we can start to pool the result, shown in the table 6.1, the coefficient for the model is : $(-101.28,-1.34,-0.16,52.)$
+
+```{r question 6 9}
+ests = pool(fit)
+table.6.1 = summary(ests,conf.int = TRUE)
+table.6.2 = data.frame("Estimate"=table.6.1[,2], "lq" = table.6.1[,7], "uq"=table.6.1[,8])
+```
+\centerline{\textbf{Figure 6.1} summary for the model}
+
+```{r table 6.2 show,echo=FALSE}
+rownames(table.6.2) = c("$\\beta_0$", "$\\beta_1$","$\\beta_2$", "$\\beta_3$","$\\beta_4$")
+colnames(table.6.2) = c("Estimate", "2.5%", "97.5%")
+knitr::kable(table.6.2, escape = FALSE, digits = 3,
+             caption = "Regression coefficient estimates and 95% CI")
+```
+
+\centerline{\textbf{Figure 6.1} Regression coefficient estimates and corresponding CI for the model}
+
+
+
+
+
