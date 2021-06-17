@@ -1,0 +1,242 @@
+---
+title: "Project 1 forest damage"
+author: "BingzheFang"
+date: "6/1/2021"
+output: html_document
+---
+
+```{r setup pakage}
+# import the package
+library(tidyverse)
+library(VIM)
+library(mice)
+library(ggplot2)
+library(Hmisc)
+library(glmnet)
+library(randomForest)
+# set up the markdown
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup data}
+# load the data
+forest = read.table("foresthealth.txt",sep = ';',header = TRUE)
+```
+
+```{r}
+# calculate the missing matrix
+missing_matrix_all = aggr(forest,numbers=T,cex.lab = 1,plot = F)$missings %>%
+  filter(Count > 2000)
+```
+
+```{r, fig.dim = c(7,4)}
+# bar plot of missing value
+ggplot(data = missing_matrix_all,mapping = aes(x = Variable, y = Count, fill = Variable, group = factor(1))) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label = Count, vjust = -0.8, hjust = 0.5)) + 
+  expand_limits(y=c(0,20000)) + 
+  ylab('Missing count') + 
+  geom_hline(yintercept = 0.25 * nrow(forest), alpha = 0.5, linetype = 2, colour = "#FF0000") +
+  annotate("text", x = 'Ed', y = 8600, label = "25% missing level", size = 4.5, colour = "#FF0000", alpha = 0.7)
+```
+
+```{r}
+# variables with too many missing variables
+forest_missing = forest %>% select(gw,sw,fruct_lev)
+# calculate the missing rate of three variables with most missing value
+missing_matrix = data.frame(md.pattern(forest_missing, plot = F))[5,1:3]
+missing_rate = round(data.frame(missing_matrix / rep(nrow(forest_missing),3) * 100),1)
+missing_info = rbind(missing_matrix,missing_rate) %>% 
+  mutate(total = c(nrow(forest_missing),100))
+rownames(missing_info) = c('missing casses','missing rate (%)')
+# show the table
+knitr::kable(missing_info)
+```
+
+```{r}
+# delete useless variables and variables with too many missing values
+forest = forest %>% mutate(X = NULL, source = NULL, id = NULL, gw = NULL, sw = NULL, fruct_lev = NULL, d_veg = NULL, s_veg = NULL)
+```
+
+```{r transform the type of variables}
+# transform the factor variables
+forest_factor = forest %>% 
+  select(geol_no,soil_no,soil_ty_no,humus_no,water_no,slope_dir,tree_sp_eu) %>%
+  mutate_all(as.factor)
+# transform the ordered factor variables
+forest_ordered = forest%>%
+  select(basa_lev,nutri_no,skel_no,depth_no,crown_lev) %>%
+  mutate_all(as.ordered)
+
+# change back to the original data
+forest[,c('geol_no','soil_no','soil_ty_no','humus_no','water_no','slope_dir','tree_sp_eu')] = forest_factor
+forest[,c('basa_lev','nutri_no','skel_no','depth_no','crown_lev')] = forest_ordered
+```
+
+```{r divide function}
+divide_forest = function(forest){
+  group = list()
+  # index data
+  group[["index"]] = forest %>% select(x_utm,y_utm,year,tree_age,tree_sp_eu,nbv_ratio,n_trees)
+  # climate data
+  group[['climate']] = forest %>% select(tmean_y,tmin_may,d_tmin0,d_tmean5,d_tmean20,globrad_y,prec_y,et0_y,cwb_y,tmean_y_lag1,globrad_y_lag1,prec_y_lag1,et0_y_lag1,cwb_y_lag1,spei_3_may,spei_3_aug,spei_6_sep,spei_12_oct,spei_24_oct)
+  # deposition data
+  group[['deposition']] = forest %>% select(n_tot_wd,ac_tot_wd)
+  # soil data
+  group[['soil']] = forest %>% select(s_vals, basa_lev, depth_mm, nfk, skel_perc)
+  # topography data
+  group[['topography']] = forest %>% select(tpi500,tpi750,tpi1000,twi25,twi50,twi100,twi25_mf,twi50_mf)
+  # twi_site data
+  group[['twi_site']] = forest %>% select(geol_no, soil_no, soil_ty_no, humus_no, water_no, nutri_no, slope_dir, skel_no, depth_no, alt_m, slope_deg)
+  # twi_stand data
+  group[['twi_stand']] = forest %>% select(H_spec, Es, H_bhd,Ed, crown_lev)
+  # water data
+  group[['water']] = forest %>% select(relawat_mean,d_relawat04,stres_mean,awat_mean,tran_mean,defsum_tdiff,defsum_awat04_d,psilogmean_mean,d_psi1200,defsum_psi1200,defsum_awat04_l)
+  return (group)
+}
+```
+
+```{r divide the data}
+# divide the data and return list group
+group = divide_forest(forest)
+```
+
+```{r}
+# recognize the rows with more than 80% missing value
+list_index = which(rowSums(is.na(group$index)) > 0)
+list_cilmate = which(rowSums(is.na(group$climate)) > 0.8 * ncol(group$climate))
+list_deposition = which(rowSums(is.na(group$deposition)) > 0.8 * ncol(group$deposition))
+list_soil = which(rowSums(is.na(group$soil)) > 0.8 * ncol(group$soil))
+list_topography = which(rowSums(is.na(group$topography)) > 0.8 * ncol(group$topography))
+list_twi_site = which(rowSums(is.na(group$twi_site)) > 0.8 * ncol(group$twi_site))
+list_twi_stand = which(rowSums(is.na(group$twi_stand)) > 0.8 * ncol(group$twi_stand))
+list_water = which(rowSums(is.na(group$water)) > 0.8 * ncol(group$water))
+# Combine the list together and remove the same elements
+list_drop = unique(c(list_cilmate,list_deposition,list_soil,list_topography,list_twi_site,list_twi_stand,list_water))
+# Delete the row data with too many missing values in each group
+forest.new = forest[-list_drop,]
+```
+
+```{r divide the data after droping}
+# divide the new data and return list group
+group.new = divide_forest(forest.new)
+```
+
+```{r}
+# inpute the NA with Mice
+mice = list()
+mice[['soil']] = mice(group.new$soil, m = 5, method = c("pmm","polr","","pmm",""), seed = 1, printFlag = FALSE)
+mice[['twi_site']] = mice(group.new$twi_site, m = 5, method = "pmm", seed = 1, printFlag = FALSE)
+mice[['twi_stand']] = mice(group.new$twi_stand, m = 5, method = c("","mean","pmm","pmm","polr"), seed = 1, printFlag = FALSE)
+mice[['climate']] = mice(group.new$climate, m = 5, method = "mean", seed = 1, printFlag = FALSE)
+```
+
+```{r}
+mice$twi_stand$meth
+```
+
+```{r}
+# return the complete data
+com = list()
+com[["climate"]] = complete(mice$climate)
+com[["soil"]] = complete(mice$soil)
+com[["twi_site"]] = complete(mice$twi_site)
+com[["twi_stand"]] = complete(mice$twi_stand)
+
+```
+
+```{r}
+# combind the data togeter and get the complete data
+forest.com = Reduce(function(x,y) cbind(x,y),list(com$climate,com$soil,com$twi_site,com$twi_stand,group.new$index,group.new$deposition,group.new$topography,group.new$water),accumulate =FALSE)
+forest.com = forest.com[,colnames(forest)]
+```
+
+
+# Correlation analysis
+
+```{r}
+# select the numeric variables
+cor.numeric = forest.com %>% 
+  select(-c(basa_lev,nutri_no,skel_no,depth_no,crown_lev,geol_no,soil_no,soil_ty_no,humus_no,water_no,slope_dir,tree_sp_eu)) 
+# calculate the pearson coefficient
+Correlation = cor(cor.numeric)
+```
+
+```{r}
+# active the original data frame
+cor.high = data.frame(A = character(),B = character(), pearson = numeric(),stringsAsFactors=FALSE)
+# insert the colnames of numeric data
+variable.num = colnames(Correlation)
+# filter the variable pairs with pearson correlation more than 0.8
+for(i in 1:(ncol(Correlation) - 1)){
+  for(j in (i+1):ncol(Correlation)){
+    if(abs(Correlation[i,j]) > 0.8){
+      tem = data.frame(A = variable.num[i],B = variable.num[j],pearson = Correlation[i,j],stringsAsFactors=FALSE)
+      cor.high = rbind(cor.high,tem)
+    }
+  }
+}
+# get one of the variable in each pair
+cor.list.num = unique(cor.high$B)
+# drop the variables with high correlation
+forest.reduce = forest.com %>% select(-cor.list.num)
+```
+
+```{r}
+# divide the train and test data set
+sample.train = sample(nrow(forest.com), 0.7*nrow(forest.com), replace = F)
+# active the non dimensional reduction data
+non.reduce = list()
+# active the data after reducing the dimension by pearson
+after.reduce = list()
+
+non.reduce[["train"]] = forest.com[sample.train,]
+non.reduce[["test"]] = forest.com[-sample.train,]
+
+cor.reduce[["train"]] = forest.reduce[sample.train,]
+cor.reduce[["test"]] = forest.reduce[-sample.train,]
+```
+
+```{r}
+set.seed(1)
+random_forest = randomForest(nbv_ratio ~., data = non.reduce$train, importance = TRUE)
+random_forest
+```
+
+```{r lasso}
+X = non.reduce$train %>% select(-nbv_ratio)
+X = scale(as.matrix(X), center = T, scale = T)
+y = non.reduce$train %>% select(nbv_ratio)
+
+lasso = cv.glmnet(as.matrix(X), as.matrix(y), alpha=1, nfolds =3)
+plot(lasso)
+plot(lassol$glmnet.fit, "lambda", label = T)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+aggr(group.new$index, prop = F, numbers=T, cex.lab = 1, plot = T)
+aggr(group.new$climate, prop = F, numbers=T, cex.lab = 1, plot = T)
+aggr(group.new$deposition, prop = F, numbers=T, cex.lab = 1, plot = T)
+aggr(group.new$soil, prop = F, numbers=T, cex.lab = 1, plot = T)
+aggr(group.new$topography, prop = F, numbers=T, cex.lab = 1, plot = T)
+aggr(group.new$twi_site, prop = F, numbers=T, cex.lab = 1, plot = T)
+aggr(group.new$twi_stand, prop = F, numbers=T, cex.lab = 1, plot = T)
+aggr(group.new$water, prop = F, numbers=T, cex.lab = 1, plot = T)
+```
+
+```{r}
+a[10000,]
+```
+```{r}
+save_test[10000,]
+```
+
+
